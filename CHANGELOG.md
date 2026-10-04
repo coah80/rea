@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.3.0](https://github.com/morluto/rea/compare/rea-agents-3.2.1...rea-agents-3.3.0) (2026-10-04)
+
+
+### Features
+
+* **native:** add inspection primitives, dispatch traces and approved UI observation ([#500](https://github.com/morluto/rea/issues/500)) ([4fbc501](https://github.com/morluto/rea/commit/4fbc501121e96b33665a76cad2e5c3e8ac2e2c6d))
+
+
+### Bug Fixes
+
+* correct native inventories and bridge error classification ([#503](https://github.com/morluto/rea/issues/503)) ([405732a](https://github.com/morluto/rea/commit/405732a7f55e3033c29533b18f7d8313dbd28570))
+
 ## [3.2.1](https://github.com/morluto/rea/compare/rea-agents-3.2.0...rea-agents-3.2.1) (2026-10-03)
 
 
