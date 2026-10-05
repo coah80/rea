@@ -47,6 +47,7 @@ export const targetFormatSchema = z.enum([
   "analysis-database",
   "mach-o",
   "elf",
+  "dol",
   "pe",
   "zip",
   "ipa",

@@ -28,11 +28,12 @@ import {
 } from "./jsonValue.js";
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u);
-const architectureSchema = z.enum(["x86", "x86_64", "arm", "arm64"]);
+const architectureSchema = z.enum(["x86", "x86_64", "arm", "arm64", "powerpc"]);
 const formatSchema = z.enum([
   "analysis-database",
   "mach-o",
   "elf",
+  "dol",
   "pe",
   "zip",
   "ipa",

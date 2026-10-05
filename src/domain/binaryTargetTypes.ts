@@ -1,5 +1,5 @@
 /** Provider-neutral CPU families detected from supported executable headers. */
-export type BinaryArchitecture = "x86" | "x86_64" | "arm" | "arm64";
+export type BinaryArchitecture = "x86" | "x86_64" | "arm" | "arm64" | "powerpc";
 
 interface BinaryTargetIdentity {
   readonly path: string;
@@ -26,7 +26,7 @@ type ExecutableTarget = BinaryTargetIdentity & {
  */
 export type BinaryTarget =
   | (ExecutableTarget & {
-      readonly format: "mach-o" | "elf";
+      readonly format: "mach-o" | "elf" | "dol";
       readonly executableRole?: never;
       readonly managed?: never;
     })

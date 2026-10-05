@@ -44,6 +44,7 @@
     "bridge/hopper_bridge.py",
     "bridge/native/ReaNativeUI.swift",
     "bridge/ghidra/ReaGhidraBridge.java",
+    "bridge/ghidra/ReaDolImport.java",
     "scripts/rea.mjs",
     "scripts/electron-active-hook.cjs",
     "scripts/electron-active-hook-boundaries.cjs",

@@ -1,3 +1,8 @@
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { GhidraHeadlessLauncher } from "./GhidraLauncher.js";
+
 import { describe, expect, it } from "vitest";
 
 import { parseConfig } from "../config.js";
@@ -204,6 +209,76 @@ describe("Ghidra platform support", () => {
       code: "architecture_unsupported",
     });
   });
+});
+
+describe("Wii Ghidra profiles", () => {
+  it.each(["elf", "dol"] as const)(
+    "binds the Wii %s loader and language bytes",
+    async (format) => {
+      const root = await mkdtemp(join(tmpdir(), "rea-wii-profile-"));
+      try {
+        const languages = join(
+          root,
+          "Ghidra/Extensions/ReaWiiPowerPC/data/languages",
+        );
+        await mkdir(languages, { recursive: true });
+        for (const suffix of ["sla", "cspec", "pspec", "ldefs"])
+          await writeFile(
+            join(languages, `ppc_gekko_broadway.${suffix}`),
+            suffix,
+          );
+        const config = parseConfig({ GHIDRA_INSTALL_DIR: root });
+        if (!config.ok) throw config.error;
+        const ghidra = new GhidraProvider(
+          config.value,
+          silentLogger,
+          installationHost(),
+          (options) => {
+            expect(options.launcher).toBeInstanceOf(GhidraHeadlessLauncher);
+            if (options.launcher instanceof GhidraHeadlessLauncher)
+              expect(options.launcher.options).toMatchObject({
+                powerpc: true,
+                targetFormat: format,
+              });
+            return {
+              start: () => Promise.resolve(ok(sessionInfo())),
+              callTool: () => Promise.resolve(ok([])),
+              close: () => Promise.resolve(),
+            };
+          },
+        );
+        const target: BinaryTarget = {
+          path: join(root, `menu.${format}`),
+          sha256: "a".repeat(64),
+          kind: "executable",
+          format,
+          architecture: "powerpc",
+          availableArchitectures: ["powerpc"],
+        };
+        expect(ghidra.inspectTargetSupport(target).status).toBe("supported");
+        const first = await ghidra.resolveAnalysisProfile(target);
+        if (!first.ok || first.value.profile === null)
+          throw new Error("Missing Wii profile");
+        expect(first.value.profile.parameters).toMatchObject({
+          language_id: "PowerPC:BE:32:Gekko_Broadway",
+          powerpc_language_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        });
+        const result = await ghidra
+          .createClient(target, first.value.profile)
+          .execute("list_procedures", {});
+        expect(result.ok).toBe(true);
+        await writeFile(join(languages, "ppc_gekko_broadway.sla"), "changed");
+        const second = await ghidra.resolveAnalysisProfile(target);
+        if (!second.ok || second.value.profile === null)
+          throw new Error("Missing changed Wii profile");
+        expect(second.value.profile.digest).not.toBe(
+          first.value.profile.digest,
+        );
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 });
 
 describe("Ghidra client projection", () => {

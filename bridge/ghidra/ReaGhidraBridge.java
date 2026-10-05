@@ -150,6 +150,10 @@ public final class ReaGhidraBridge extends HeadlessScript {
         if (currentProgram == null) {
             throw new IllegalStateException("REA bridge requires an imported program");
         }
+        if (currentProgram.getExecutableFormat().equals("Raw Binary") &&
+            !"rea-dol-v1".equals(currentProgram.getOptions("Program Information").getString("REA DOL importer", ""))) {
+            throw new IllegalStateException("REA DOL import did not complete");
+        }
         sessionDefaultAddressSpace =
             currentProgram.getAddressFactory().getDefaultAddressSpace();
         if (!Application.getApplicationVersion().equals(descriptor.providerVersion)) {

@@ -61,6 +61,8 @@ export interface GhidraHeadlessLauncherOptions {
   readonly bridgeScriptPath: string;
   readonly platform?: NodeJS.Platform;
   readonly comSpec?: string;
+  readonly targetFormat?: string;
+  readonly powerpc?: boolean;
 }
 
 /** Launch Ghidra without copying scripts into or modifying its installation. */
@@ -109,6 +111,8 @@ export class GhidraHeadlessLauncher implements GhidraLauncher {
         descriptorPath: paths.descriptorPath,
         ghidraLogPath: paths.ghidraLogPath,
         scriptLogPath: paths.scriptLogPath,
+        ...(this.options.targetFormat === "dol" ? { dol: true } : {}),
+        ...(this.options.powerpc === true ? { powerpc: true } : {}),
       });
       const command = ghidraHeadlessCommand({
         platform,
@@ -255,6 +259,8 @@ export interface GhidraHeadlessArgumentOptions {
   readonly descriptorPath: string;
   readonly ghidraLogPath: string;
   readonly scriptLogPath: string;
+  readonly dol?: boolean;
+  readonly powerpc?: boolean;
 }
 
 /** Build the complete read-only headless invocation in deterministic order. */
@@ -265,6 +271,12 @@ export const ghidraHeadlessArguments = (
   "rea-project",
   "-import",
   options.targetPath,
+  ...(options.dol === true
+    ? ["-loader", "BinaryLoader", "-preScript", "ReaDolImport.java"]
+    : []),
+  ...(options.dol === true || options.powerpc === true
+    ? ["-processor", "PowerPC:BE:32:Gekko_Broadway", "-cspec", "default"]
+    : []),
   "-readOnly",
   "-deleteProject",
   "-log",
