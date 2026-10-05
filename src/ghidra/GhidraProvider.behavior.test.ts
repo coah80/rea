@@ -262,6 +262,7 @@ describe("Wii Ghidra profiles", () => {
         expect(first.value.profile.parameters).toMatchObject({
           language_id: "PowerPC:BE:32:Gekko_Broadway",
           powerpc_language_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+          powerpc_register_helpers: "verified-inline-v1",
         });
         const result = await ghidra
           .createClient(target, first.value.profile)

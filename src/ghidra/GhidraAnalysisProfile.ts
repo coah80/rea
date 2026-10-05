@@ -81,6 +81,7 @@ export const resolveGhidraAnalysisProfile = (
           ? {}
           : {
               powerpc_language_sha256: powerpcLanguageDigest,
+              powerpc_register_helpers: "verified-inline-v1",
             }),
       }),
       compatibility: {
