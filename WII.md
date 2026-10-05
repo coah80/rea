@@ -33,6 +33,16 @@ The DOL importer validates section bounds and overlaps, maps text and data at th
 
 The Wii Menu 4.3U DOL wraps its main program in a data section and has a small bootstrap text section. The importer preserves that layout. Use the corresponding `main.elf` for symbol-based analysis of the main program; importing the wrapper does not reconstruct its runtime memory changes.
 
+For linked PowerPC programs, REA inlines named `_savegpr_N`, `_restgpr_N`, `_savefpr_N`, and `_restfpr_N` helpers only after verifying every register access, stack offset, and final return instruction in an initialized executable block. This prevents ordinary-call assumptions from obscuring the caller's arguments and return value. The policy is included in the analysis profile. It changes only the temporary analysis database.
+
+Unresolved helpers in relocatable objects have no body to verify and remain ordinary calls. Prefer the linked ELF when their calling convention affects the recovered pseudocode. Helper names alone never trigger inlining.
+
+The live regression fixture checks integer and floating-point return values, a misleading helper name, and a truncated helper:
+
+```sh
+node scripts/verify-wii-register-helpers.mjs build/wii-register-helpers
+```
+
 REA output is decompiler analysis. Exact source matching and full linking still require the Wii project's object comparison and DOL checks.
 
 ## This machine

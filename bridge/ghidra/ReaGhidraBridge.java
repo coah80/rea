@@ -86,6 +86,9 @@ import ghidra.program.model.pcode.Varnode;
 import ghidra.program.model.pcode.VarnodeAST;
 
 public final class ReaGhidraBridge extends HeadlessScript {
+    private static final Pattern REGISTER_HELPER = Pattern.compile(
+        "_(save|rest)(gpr|fpr)_(1[4-9]|2[0-9]|3[01])"
+    );
     private static final int MAX_HIGH_PCODE_OPS = 3000;
     private static final int MAX_HIGH_PCODE_INPUTS_PER_OP = 64;
     private static final int MAX_HIGH_PCODE_DEF_USE_EDGES = 12000;
@@ -170,6 +173,7 @@ public final class ReaGhidraBridge extends HeadlessScript {
             );
         }
         try {
+            inlineVerifiedRegisterHelpers();
             initializeDecompiler();
             serve(descriptor);
         }
@@ -367,6 +371,52 @@ public final class ReaGhidraBridge extends HeadlessScript {
         result.add("capabilities", GSON.toJsonTree(CAPABILITIES));
         result.add("target", target);
         return result;
+    }
+
+    private void inlineVerifiedRegisterHelpers() {
+        if (!currentProgram.getLanguageID().getIdAsString().equals("PowerPC:BE:32:Gekko_Broadway")) {
+            return;
+        }
+        FunctionIterator functions = currentProgram.getFunctionManager().getFunctions(true);
+        while (functions.hasNext()) {
+            Function function = functions.next();
+            java.util.regex.Matcher match = REGISTER_HELPER.matcher(function.getName());
+            if (function.isExternal() || !match.matches()) {
+                continue;
+            }
+            boolean floatingPoint = match.group(2).equals("fpr");
+            int first = Integer.parseInt(match.group(3));
+            int opcode = match.group(1).equals("save") ? 36 : 32;
+            if (floatingPoint) {
+                opcode += 18;
+            }
+            if (matchesRegisterHelper(function, first, opcode, floatingPoint ? 8 : 4)) {
+                function.setInline(true);
+            }
+        }
+    }
+
+    private boolean matchesRegisterHelper(Function function, int first, int opcode, int width) {
+        Address entry = function.getEntryPoint();
+        MemoryBlock block = currentProgram.getMemory().getBlock(entry);
+        long length = 4L * (33 - first);
+        if (block == null || !block.isExecute() || !block.isInitialized() ||
+            block.getEnd().subtract(entry) < length - 1) {
+            return false;
+        }
+        try {
+            for (int register = first; register <= 31; register++) {
+                int expected = (opcode << 26) | (register << 21) | (11 << 16) |
+                    ((width * (register - 32)) & 0xffff);
+                if (currentProgram.getMemory().getInt(entry.add(4L * (register - first))) != expected) {
+                    return false;
+                }
+            }
+            return currentProgram.getMemory().getInt(entry.add(length - 4)) == 0x4e800020;
+        }
+        catch (ghidra.program.model.mem.MemoryAccessException exception) {
+            return false;
+        }
     }
 
     private void initializeDecompiler() {
