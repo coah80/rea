@@ -65,7 +65,17 @@ import {
 
 export { GHIDRA_PROVIDER_IDENTITY, GHIDRA_PROVIDER_TOOL_CONTRACTS };
 
-const SUPPORTED_ARCHITECTURES = new Set(["x86", "x86_64", "arm", "arm64"]);
+const GHIDRA_BRIDGE_SCRIPT_PATH = fileURLToPath(
+  new URL("../../bridge/ghidra/ReaGhidraBridge.java", import.meta.url),
+);
+
+const SUPPORTED_ARCHITECTURES = new Set([
+  "x86",
+  "x86_64",
+  "arm",
+  "arm64",
+  "powerpc",
+]);
 
 /** Production seam for exercising provider projection without a real process. */
 export type GhidraProviderClientFactory = (
@@ -153,7 +163,7 @@ export class GhidraProvider implements AnalysisProviderCandidate {
         status: "unsupported",
         code: "architecture_unsupported",
         reason:
-          "Ghidra v1 requires a concrete x86, x86_64, arm, or arm64 target architecture.",
+          "Ghidra v1 requires a concrete x86, x86_64, arm, arm64, or powerpc target architecture.",
         diagnostics,
       };
     return {
@@ -203,10 +213,10 @@ export class GhidraProvider implements AnalysisProviderCandidate {
         ...(this.config.ghidraJavaHome === undefined
           ? {}
           : { javaHome: this.config.ghidraJavaHome }),
-        bridgeScriptPath: fileURLToPath(
-          new URL("../../bridge/ghidra/ReaGhidraBridge.java", import.meta.url),
-        ),
+        bridgeScriptPath: GHIDRA_BRIDGE_SCRIPT_PATH,
         platform: installation.platform,
+        targetFormat: target.format,
+        powerpc: target.architecture === "powerpc",
       }),
       targetPath: target.path,
       targetSha256: target.sha256,

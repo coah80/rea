@@ -16,6 +16,33 @@ import { createEvidence } from "./evidence.js";
 import { createEvidenceBundle } from "./evidenceBundle.js";
 
 describe("analysis snapshot contract", () => {
+  it("round-trips Wii DOL identity and evidence", () => {
+    const target = {
+      path: ANALYSIS_SNAPSHOT_TARGET.path,
+      sha256: ANALYSIS_SNAPSHOT_TARGET.sha256,
+      kind: "executable" as const,
+      format: "dol" as const,
+      architecture: "powerpc" as const,
+      availableArchitectures: ["powerpc" as const],
+    };
+    const evidence = createEvidence(target, ANALYSIS_SNAPSHOT_PROVIDER, {
+      operation: "procedure_assembly",
+      parameters: { procedure: "_start" },
+      result: "blr",
+      analysisProfile: ANALYSIS_SNAPSHOT_PROFILE,
+    });
+    const parsed = analysisSnapshotSchema.parse({
+      target: snapshotTarget(target),
+      binding: snapshotBinding(ANALYSIS_SNAPSHOT_PROFILE),
+      entries: [],
+      evidence_bundle: createEvidenceBundle([evidence]),
+    });
+    expect(parsed.target).toMatchObject({
+      format: "dol",
+      architecture: "powerpc",
+    });
+  });
+
   it("accepts snapshots with more than ten thousand analysis entries", () => {
     const binding = snapshotBinding(ANALYSIS_SNAPSHOT_PROFILE);
     const entry = {

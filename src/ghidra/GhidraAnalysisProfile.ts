@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import type {
   AnalysisProfileResolution,
   ProviderIdentity,
@@ -28,6 +32,33 @@ export const resolveGhidraAnalysisProfile = (
       err(new ProviderAdapterError(identity.id, "resolve_analysis_profile")),
     );
   const provider = { ...identity, version: installation.providerVersion };
+  let powerpcLanguageDigest: string | undefined;
+  if (target.architecture === "powerpc") {
+    try {
+      const hash = createHash("sha256");
+      for (const suffix of ["sla", "cspec", "pspec", "ldefs"]) {
+        hash.update(suffix);
+        hash.update(
+          readFileSync(
+            join(
+              installation.installDir,
+              "Ghidra/Extensions/ReaWiiPowerPC/data/languages",
+              `ppc_gekko_broadway.${suffix}`,
+            ),
+          ),
+        );
+      }
+      powerpcLanguageDigest = hash.digest("hex");
+    } catch (cause: unknown) {
+      return Promise.resolve(
+        err(
+          new ProviderAdapterError(identity.id, "resolve_analysis_profile", {
+            cause,
+          }),
+        ),
+      );
+    }
+  }
   return Promise.resolve(
     ok({
       profile: createAnalysisProfile(provider, {
@@ -38,14 +69,26 @@ export const resolveGhidraAnalysisProfile = (
           ...(target.availableArchitectures ?? []),
         ].sort(),
         import_mode: "ephemeral-read-only",
-        loader: "auto-from-header",
-        language_id: "auto-from-header",
-        compiler_spec_id: "auto-default",
+        loader: target.format === "dol" ? "rea-dol-v1" : "auto-from-header",
+        language_id:
+          target.architecture === "powerpc"
+            ? "PowerPC:BE:32:Gekko_Broadway"
+            : "auto-from-header",
+        compiler_spec_id:
+          target.architecture === "powerpc" ? "default" : "auto-default",
         analyzer_preset: "ghidra-default",
+        ...(powerpcLanguageDigest === undefined
+          ? {}
+          : {
+              powerpc_language_sha256: powerpcLanguageDigest,
+            }),
       }),
       compatibility: {
-        languageId: "auto",
-        compilerSpecId: "auto",
+        languageId:
+          target.architecture === "powerpc"
+            ? "PowerPC:BE:32:Gekko_Broadway"
+            : "auto",
+        compilerSpecId: target.architecture === "powerpc" ? "default" : "auto",
       },
     }),
   );

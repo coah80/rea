@@ -78,6 +78,8 @@ export const hopperLoaderArgsForTarget = (
   if (target.kind !== "executable")
     return err(new ProviderAdapterError("hopper", "resolve_analysis_profile"));
   const architecture = target.architecture;
+  if (architecture === "powerpc" || target.format === "dol")
+    return err(new ProviderAdapterError("hopper", "resolve_analysis_profile"));
   const flag = hopperArchitectureFlag(architecture);
   switch (target.format) {
     case "mach-o":
@@ -93,7 +95,9 @@ export const hopperLoaderArgsForTarget = (
   }
 };
 
-const hopperArchitectureFlag = (architecture: BinaryArchitecture): string => {
+const hopperArchitectureFlag = (
+  architecture: Exclude<BinaryArchitecture, "powerpc">,
+): string => {
   switch (architecture) {
     case "x86":
       return "--intel-32";

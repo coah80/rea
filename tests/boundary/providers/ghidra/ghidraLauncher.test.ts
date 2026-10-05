@@ -65,6 +65,25 @@ afterEach(async () => {
 });
 
 describe("Ghidra headless launcher", () => {
+  it("selects Broadway explicitly and remaps DOL before analysis", () => {
+    const options = {
+      projectRoot: "/tmp/project",
+      targetPath: "/tmp/menu.dol",
+      bridgeScriptPath: "/package/bridge/ReaGhidraBridge.java",
+      descriptorPath: "/tmp/session.json",
+      ghidraLogPath: "/tmp/ghidra.log",
+      scriptLogPath: "/tmp/script.log",
+      powerpc: true,
+    };
+    const elf = ghidraHeadlessArguments(options);
+    const dol = ghidraHeadlessArguments({ ...options, dol: true });
+    expect(elf).toContain("PowerPC:BE:32:Gekko_Broadway");
+    expect(elf).not.toContain("BinaryLoader");
+    expect(dol).toContain("BinaryLoader");
+    expect(dol).toContain("ReaDolImport.java");
+    expect(dol.indexOf("-preScript")).toBeLessThan(dol.indexOf("-postScript"));
+  });
+
   it("builds a read-only import in deterministic order", () => {
     expect(
       ghidraHeadlessArguments({

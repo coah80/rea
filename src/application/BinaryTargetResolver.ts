@@ -27,6 +27,8 @@ import {
   type ExecutableMetadata,
 } from "../domain/binaryTarget.js";
 
+import { parseDolHeader } from "../domain/dol.js";
+
 const execFileAsync = promisify(execFile);
 
 /**
@@ -73,7 +75,11 @@ export const parseBinaryTarget = async (
           ? ok({ ...identity, kind: "archive", format: artifactFormat })
           : ok({ ...identity, kind: "artifact", format: artifactFormat });
       }
-      const detected = await readExecutableMetadata(handle, hostArchitecture);
+      const detected = await readExecutableMetadata(
+        handle,
+        hostArchitecture,
+        path,
+      );
       if (!detected.ok) return err(new BinaryTargetError(path, detected.error));
       return ok({
         path,
@@ -98,7 +104,7 @@ const detectArtifactFormat = async (
 ): Promise<
   | Exclude<
       BinaryTarget["format"],
-      "analysis-database" | "mach-o" | "elf" | "pe"
+      "analysis-database" | "mach-o" | "elf" | "pe" | "dol"
     >
   | undefined
 > => {
@@ -140,7 +146,7 @@ const namedArtifactFormat = (
 const isArchiveFormat = (
   format: Exclude<
     BinaryTarget["format"],
-    "analysis-database" | "mach-o" | "elf" | "pe"
+    "analysis-database" | "mach-o" | "elf" | "pe" | "dol"
   >,
 ): format is Extract<BinaryTarget, { kind: "archive" }>["format"] =>
   ["zip", "ipa", "apk", "msix", "appx", "asar", "dmg", "pkg"].includes(format);
@@ -243,10 +249,21 @@ const decodeXml = (value: string): string =>
 const readExecutableMetadata = async (
   handle: FileHandle,
   hostArchitecture: NodeJS.Architecture,
+  path: string,
 ): Promise<Result<ExecutableMetadata, string>> => {
   const prefix = Buffer.alloc(4096);
   const prefixRead = await handle.read(prefix, 0, prefix.length, 0);
   const bytes = prefix.subarray(0, prefixRead.bytesRead);
+  if (path.toLowerCase().endsWith(".dol")) {
+    const dol = parseDolHeader(bytes, (await handle.stat()).size);
+    return dol.ok
+      ? ok({
+          format: "dol",
+          architecture: "powerpc",
+          availableArchitectures: ["powerpc"],
+        })
+      : dol;
+  }
   if (bytes.length >= 64 && bytes[0] === 0x4d && bytes[1] === 0x5a) {
     const offset = bytes.readUInt32LE(0x3c);
     return readPeMetadata(handle, offset);

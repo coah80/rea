@@ -6,7 +6,7 @@ export type { BinaryArchitecture, BinaryTarget } from "./binaryTargetTypes.js";
 /** Format and architecture facts recovered from an executable header. */
 export type ExecutableMetadata =
   | {
-      readonly format: "mach-o" | "elf";
+      readonly format: "mach-o" | "elf" | "dol";
       readonly architecture: BinaryArchitecture;
       readonly availableArchitectures: readonly BinaryArchitecture[];
     }
@@ -107,6 +107,8 @@ const parseElf = (bytes: Buffer): Result<ExecutableMetadata, string> => {
   const little = bytes[5] === 1;
   if (!little && bytes[5] !== 2) return err("unsupported ELF endianness");
   const machine = little ? bytes.readUInt16LE(18) : bytes.readUInt16BE(18);
+  if (machine === 20 && (bytes[4] !== 1 || bytes[5] !== 2))
+    return err("PowerPC support requires a 32-bit big-endian ELF");
   const architecture = elfArchitecture(machine);
   if (architecture === undefined) return err("unsupported ELF architecture");
   return ok({
@@ -200,6 +202,8 @@ const machArchitecture = (cpu: number): BinaryArchitecture | undefined => {
 
 const elfArchitecture = (machine: number): BinaryArchitecture | undefined => {
   switch (machine) {
+    case 20:
+      return "powerpc";
     case 3:
       return "x86";
     case 62:

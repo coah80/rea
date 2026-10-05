@@ -72,7 +72,7 @@ const subjectTarget = (
       readonly path: string;
       readonly sha256: string;
       readonly format: "pe";
-      readonly architecture?: "x86" | "x86_64" | "arm" | "arm64";
+      readonly architecture?: "x86" | "x86_64" | "arm" | "arm64" | "powerpc";
     }
   | undefined => {
   const subject =

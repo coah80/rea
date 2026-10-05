@@ -140,6 +140,13 @@ export class HopperProvider implements AnalysisProviderCandidate {
         reason: `Hopper cannot directly analyze ${target.kind} targets.`,
         diagnostics,
       };
+    if (target.architecture === "powerpc" || target.format === "dol")
+      return {
+        status: "unsupported",
+        code: "architecture_unsupported",
+        reason: "Wii PowerPC targets require the Ghidra provider.",
+        diagnostics,
+      };
     if (target.kind === "database")
       return {
         status: "supported",
